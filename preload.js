@@ -22,17 +22,22 @@ class Settings {
   onLoad() {
     window.closeClient = close;
     this.createSettings();
-    const gameSettings = window.windows[0];
-    const gameTabIndex = gameSettings.tabs.push({ name: 'Client', categories: [] });
-    gameSettings.getSettings = new Proxy(gameSettings.getSettings, {
-      apply(target, that, args) {
-          let value = Reflect.apply(...arguments);
-          if (that.tabIndex == gameTabIndex -1) {
-            return preload.settings.getHTML();
-          }
-          return value;
+    let wait = setInterval(() => {
+      if (void 0 != window.windows) {
+          clearInterval(wait);
+          const gameSettings = window.windows[0];
+          const gameTabIndex = gameSettings.tabs.push({ name: 'Client', categories: [] });
+          gameSettings.getSettings = new Proxy(gameSettings.getSettings, {
+            apply(target, that, args) {
+                let value = Reflect.apply(...arguments);
+                if (that.tabIndex == gameTabIndex -1) {
+                  return preload.settings.getHTML();
+                }
+                return value;
+            }
+          })
       }
-    })
+  }, 100);
   }
   genHash(sz) {
     return [...Array(sz)].map(_ => 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'[~~(Math.random()*52)]).join('');

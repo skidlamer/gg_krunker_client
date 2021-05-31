@@ -174,13 +174,13 @@ class Preload {
           try {
               const scriptPath = path.join(scriptsPath, filename);
               const scriptData = fs.readFileSync(scriptPath, 'utf8');
-              if (scriptData) {
-                this.mainWindow.webContents.executeJavaScript(scriptData);
-                console.log(`Loaded userscript: ${filename}`);
-              } else {
+              //if (scriptData) {
+                //this.mainWindow.webContents.executeJavaScript(scriptData);
+                //console.log(`Loaded userscript: ${filename}`);
+              //} else {
                 require(scriptPath);
                 console.log(`Loaded userscript: ${filename}`);
-              }
+              //}
           } catch (err) {
               console.error('Failed to load userscript:', err);
           }

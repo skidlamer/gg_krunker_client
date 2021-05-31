@@ -112,8 +112,9 @@ class Main {
       }
     });
     localShortcut.register('Esc', () => contents.send('esc'));
-    localShortcut.register('Alt+F4', () => app.quit());
-    localShortcut.register('F5', () => contents.reloadIgnoringCache());
+    localShortcut.register('Ctrl+F4', () => app.quit());
+    localShortcut.register('Ctrl+F5', () => contents.reloadIgnoringCache());
+    localShortcut.register('Ctrl+F6', () => this.windows.game.loadURL('https://browserfps.com/'));
     localShortcut.register('F5', () => contents.reload());
     localShortcut.register('F11', (full = !this.windows.game.isFullScreen()) => {
       this.windows.game.setFullScreen(full);

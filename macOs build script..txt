@@ -1,0 +1,1 @@
+npx electron-packager . gg-krunker-client --overwrite --asar=true --platform=darwin --arch=x64 --icon=icon.icns --prune=true --out=release-builds --version-string.CompanyName=GamingGurus --version-string.FileDescription=KrunkerClient --version-string.ProductName="GG_KrunkerClient" --electronVersion 9.4.4

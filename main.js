@@ -1,9 +1,10 @@
 require('v8-compile-cache');
 const electron = require('electron');
-const { app, BrowserWindow, globalShortcut, ipcMain, Menu, protocol } = electron;
+const { app, BrowserWindow, globalShortcut, ipcMain, Menu, net, protocol, session } = electron;
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const url = require('url');
 const localShortcut = require('electron-localshortcut');
 const Store = require('electron-store'), config = new Store();
 const log = require('electron-log');
@@ -76,13 +77,6 @@ class Main {
   }
   initialize() {
     this.commandline();
-    protocol.registerSchemesAsPrivileged([{
-      scheme: "res-swap",
-      privileges: {
-        secure: true,
-        corsEnabled: true
-      }
-    }]);
 
     if (process.platform == 'darwin') {
       Menu.setApplicationMenu(Menu.buildFromTemplate([{
@@ -108,7 +102,7 @@ class Main {
 
     app.whenReady().then(() => {
       console.info('Krunker@ %s{ Electron: %s, Node: %s, Chromium: %s }', app.getVersion(), process.versions.electron, process.versions.node, process.versions.chrome);
-      protocol.registerFileProtocol("res-swap", (request, callback) => callback(decodeURI(request.url.replace(/^res-swap:/, ""))));
+      protocol.registerFileProtocol("file", (request, callback) => callback(decodeURI(request.url.replace(/^file:/, ""))));
       this.postMessage();
       this.directories();
       if (config.get('enableResourceSwap', false)) {
@@ -163,6 +157,7 @@ class Main {
       center: true,
       show: false,
       webPreferences: {
+        webSecurity: false,
         contextIsolation: false,
         nodeIntegration: false,
         enableRemoteModule: true,
@@ -222,20 +217,20 @@ class Main {
     let swap = { filter: { urls: [] }, files: {} };
     const allFilesSync = (dir, fileList = []) => {
       fs.readdirSync(dir).forEach(file => {
-        const filePath = consts.joinPath(dir, file);
-        let useAssets = !(/KrunkerResourceSwapper\\(css|docs|img|libs|pkg|sound)/.test(dir));
-        if (fs.statSync(filePath).isDirectory()) {
-          allFilesSync(filePath);
-        } else {
-          let krunk = '*://' + (useAssets ? 'assets.' : '') + 'krunker.io' + filePath.replace(swapDir, '').replace(/\\/g, '/') + '*';
-          swap.filter.urls.push(krunk);
-          swap.files[krunk.replace(/\*/g, '')] = url.format({
-            pathname: filePath,
-            protocol: 'res-swap:',
-            slashes: true
-          });
-        }
-      });
+            const filePath = path.join(dir, file);
+            let useAssets = !(/Resources\\Swap\\(models|textures)/.test(dir));
+            if (fs.statSync(filePath).isDirectory()) {
+                allFilesSync(filePath);
+            } else {
+                let krunk = '*://krunker.io' + filePath.replace(swapDir, '').replace(/\\/g, '/') + '*';
+                swap.filter.urls.push(krunk);
+                swap.files[krunk.replace(/\*/g, '')] = url.format({
+                    pathname: filePath,
+                    protocol: 'file:',
+                    slashes: true
+                });
+            }
+        });
     };
     allFilesSync(swapDir);
     if (swap.filter.urls.length) {
@@ -255,7 +250,7 @@ class Main {
     if (!fs.existsSync(dumpDir)) try { fs.mkdirSync(dumpDir, { recursive: true }) } catch (e) { console.error(e) };
 
     let dumpedURLs = [];
-    electron.session.defaultSession.webRequest.onCompleted(details => {
+    session.defaultSession.webRequest.onCompleted(details => {
       const regex = RegExp('^http(s?):\/\/(beta|assets\.)?krunker.io\/*');
       if (details.statusCode == 200 && regex.test(details.url) && !dumpedURLs.includes(details.url)) {
         dumpedURLs.push(details.url)
@@ -267,11 +262,11 @@ class Main {
             res.on("data", chunk => raw += chunk)
             res.on("end", () => {
               let target = new url.URL(details.url),
-                targetPath = consts.joinPath(dumpDir, target.hostname, path.dirname(target.pathname))
+                targetPath = path.join(dumpDir, target.hostname, path.dirname(target.pathname))
               if (!fs.existsSync(targetPath)) fs.mkdirSync(targetPath, {
                 recursive: true
               })
-              fs.writeFileSync(consts.joinPath(dumpDir, target.hostname, target.pathname == "/" ? "index.html" : target.pathname), raw, "binary")
+              fs.writeFileSync(path.join(dumpDir, target.hostname, target.pathname == "/" ? "index.html" : target.pathname), raw, "binary")
             })
           }
         })
